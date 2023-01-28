@@ -14,15 +14,15 @@
 .INCLUDE "tn2313Adef.inc"
 .LIST
 
-.DEF COUNTER = r20
+.DEF DATA = r20               ; DATA to transmit
 
 ;========================================;
 ;                LABELS                  ;
 ;========================================;
 
-.EQU CLOCK_PIN        = PB0   ; ST_CP on 74HC595
+.EQU CLOCK_PIN        = PB0   ; SH_CP on 74HC595
 .EQU DATA_PIN         = PB1   ; DS on 74HC595
-.EQU LATCH_PIN        = PB2   ; SH_CP on 74HC595
+.EQU LATCH_PIN        = PB2   ; ST_CP on 74HC595
 
 ;========================================;
 ;              CODE SEGMENT              ;
@@ -66,8 +66,7 @@ RESET_vect:
 
 MCU_INIT:
   rcall     INIT_PORTS
-
-  ldi       COUNTER, 0
+  ldi       DATA, 0b00000001
   rjmp      LOOP
 
 INIT_PORTS:
@@ -80,7 +79,9 @@ ret
 ;========================================;
 TRANSMIT_595:
   push      r19
-  mov       r19, COUNTER
+  push      r21
+  in        r21, SREG
+  mov       r19, DATA
   ldi       r16, 8
   _TRANSMIT_595_LOOP:
     lsl     r19
@@ -97,10 +98,12 @@ TRANSMIT_595:
     _TRANSMIT_595_COMMIT:
       sbi      PORTB, CLOCK_PIN
       cbi      PORTB, CLOCK_PIN
-      sbi      PORTB, LATCH_PIN
-      cbi      PORTB, LATCH_PIN 
     dec      r16
     brne     _TRANSMIT_595_LOOP
+    sbi      PORTB, LATCH_PIN
+    cbi      PORTB, LATCH_PIN 
+  out        SREG, r21
+  pop        r21
   pop        r19
 ret
 
@@ -110,15 +113,12 @@ ret
 
 LOOP:
   rcall     TRANSMIT_595
-  inc       COUNTER
   rcall     DELAY
+  rol       DATA
   rjmp      LOOP
 
 DELAY:
-  push      r16
-  push      r17
-  cli
-  ldi       r16, 20
+  ldi       r16, 70
   _DELAY_1:
     ldi     r17, 255   
   _DELAY_2:
@@ -130,8 +130,4 @@ DELAY:
 
     dec     r16
     brne    _DELAY_1    
-  sei
-
-  pop       r17
-  pop       r16
 ret                    
