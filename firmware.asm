@@ -9,7 +9,7 @@
 ; Clock frequency: 12 MHz External Crystal Oscillator
 ; Fuses: lfuse: 0x4F, hfuse: 0x9F, efuse: 0xFF, lock: 0xFF
 ;
-; Written by Sergey Yarkov 22.01.2023
+; Written by Sergey Yarkov 28.01.2023
 
 .INCLUDE "tn2313Adef.inc"
 .LIST
