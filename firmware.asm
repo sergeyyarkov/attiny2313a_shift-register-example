@@ -14,7 +14,9 @@
 .INCLUDE "tn2313Adef.inc"
 .LIST
 
-.DEF DATA = r20               ; DATA to transmit
+.DEF TEMP_A           = r16               ; Temp register A
+.DEF TEMP_B           = r17               ; Temp register B
+.DEF DATA             = r20               ; DATA to transmit
 
 ;========================================;
 ;                LABELS                  ;
@@ -36,37 +38,28 @@
 ;========================================;
 
 rjmp 	RESET_vect			      ; Program start at RESET vector
-;reti                        ; External Interrupt Request 0 / inactive
-;reti		                    ; External Interrupt Request 1 / inactive
-;reti                        ; Timer/Counter1 Capture Event / inactive
-;reti		                    ; Timer/Counter1 Compare Match A / inactive
-;reti                        ; Timer/Counter1 Overflow / inactive
-;reti                        ; Timer/Counter0 Overflow / inactive
-;reti                        ; USART0, Rx Complete / inactive
-;reti                        ; USART0 Data Register Empty / inactive
-;reti						            ; USART0, Tx Complete / inactive
-;reti                        ; Analog Comparator / inactive
-;reti	                      ; Pin Change Interrupt Request 0/ inactive
-;reti                        ; Timer/Counter1 Compare Match B / inactive
-;reti                        ; Timer/Counter0 Compare Match A / inactive
-;reti                        ; Timer/Counter0 Compare Match B / inactive
-;reti                        ; USI Start Condition/ inactive
-;reti                        ; USI Overflow / inactive
-;reti                        ; EEPROM Ready/ inactive
-;reti                        ; Watchdog Timer Overflow / inactive
-;reti                        ; Pin Change Interrupt Request 1 / inactive
-;reti                        ; Pin Change Interrupt Request 2 / inactive
 
 RESET_vect:
   ;========================================;
   ;        INITIALIZE STACK POINTER        ;
   ;========================================;
-  ldi       r16, low(RAMEND)
-  out       SPL, r16
+
+  ldi       TEMP_A, low(RAMEND)
+  out       SPL, TEMP_A
 
 MCU_INIT:
   rcall     INIT_PORTS
   ldi       DATA, 0b00000001
+  rjmp      LOOP
+
+;========================================;
+;            MAIN PROGRAM LOOP           ;
+;========================================;
+
+LOOP:
+  rcall     TRANSMIT_595
+  rcall     DELAY
+  rol       DATA
   rjmp      LOOP
 
 INIT_PORTS:
@@ -77,9 +70,8 @@ ret
 ;========================================;
 ;          SEND BYTE TO 74HC595          ;
 ;========================================;
+
 TRANSMIT_595:
-  push      r19
-  push      r21
   in        r21, SREG
   mov       r19, DATA
   ldi       r16, 8
@@ -103,31 +95,19 @@ TRANSMIT_595:
     sbi      PORTB, LATCH_PIN
     cbi      PORTB, LATCH_PIN 
   out        SREG, r21
-  pop        r21
-  pop        r19
 ret
 
-;========================================;
-;            MAIN PROGRAM LOOP           ;
-;========================================;
-
-LOOP:
-  rcall     TRANSMIT_595
-  rcall     DELAY
-  rol       DATA
-  rjmp      LOOP
-
 DELAY:
-  ldi       r16, 70
+  ldi       TEMP_A, 70
   _DELAY_1:
-    ldi     r17, 255   
+    ldi     TEMP_B, 255   
   _DELAY_2:
-    dec     r17         
+    dec     TEMP_B         
     nop                 
     nop                
     nop                 
     brne    _DELAY_2    
 
-    dec     r16
+    dec     TEMP_A
     brne    _DELAY_1    
 ret                    
