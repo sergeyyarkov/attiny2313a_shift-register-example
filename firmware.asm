@@ -6,8 +6,8 @@
 ; Device Datasheet: http://ww1.microchip.com/downloads/en/DeviceDoc/doc8246.pdf
 ; Package: SOIC-20W_7.5x12.8mm_P1.27mm
 ; Assembler: AVR macro assembler 2.2.7
-; Clock frequency: 12 MHz External Crystal Oscillator
-; Fuses: lfuse: 0x4F, hfuse: 0x9F, efuse: 0xFF, lock: 0xFF
+; Clock frequency: 8 MHz Internal with CKDIV8
+; Fuses: lfuse: 0x64, hfuse: 0x9F, efuse: 0xFF, lock: 0xFF
 ;
 ; Written by Sergey Yarkov 28.01.2023
 
@@ -58,13 +58,13 @@ MCU_INIT:
 
 LOOP:
   rcall     TRANSMIT_595
-  rcall     DELAY
   rol       DATA
+  rcall     DELAY
   rjmp      LOOP
 
 INIT_PORTS:
-  ldi       r16, (1<<CLOCK_PIN) | (1<<LATCH_PIN) | (1<<DATA_PIN)
-  out       DDRB, r16
+  ldi       TEMP_A, (1<<CLOCK_PIN) | (1<<LATCH_PIN) | (1<<DATA_PIN)
+  out       DDRB, TEMP_A
 ret
 
 ;========================================;
@@ -74,8 +74,10 @@ ret
 TRANSMIT_595:
   in        r21, SREG
   mov       r19, DATA
-  ldi       r16, 8
+  ldi       TEMP_B, 8
   _TRANSMIT_595_LOOP:
+    ;
+    ; Shift a bit into the Carry flag and check if it is set to 1 or 0.
     lsl     r19
     brcc    _TRANSMIT_595_SEND_LOW
     brcs    _TRANSMIT_595_SEND_HIGH
@@ -88,16 +90,20 @@ TRANSMIT_595:
       cbi     PORTB, DATA_PIN
 
     _TRANSMIT_595_COMMIT:
-      sbi      PORTB, CLOCK_PIN
       cbi      PORTB, CLOCK_PIN
-    dec      r16
+      sbi      PORTB, CLOCK_PIN
+    dec      TEMP_B
     brne     _TRANSMIT_595_LOOP
+    
+    ;
+    ; Copy data from shift register to storage register
     sbi      PORTB, LATCH_PIN
     cbi      PORTB, LATCH_PIN 
   out        SREG, r21
 ret
 
 DELAY:
+  push      TEMP_A
   ldi       TEMP_A, 70
   _DELAY_1:
     ldi     TEMP_B, 255   
@@ -107,7 +113,7 @@ DELAY:
     nop                
     nop                 
     brne    _DELAY_2    
-
     dec     TEMP_A
-    brne    _DELAY_1    
+    brne    _DELAY_1
+  pop       TEMP_A    
 ret                    
